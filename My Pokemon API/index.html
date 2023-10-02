@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokemon API Example</title>
+  <style>
+    body {
+      /* Rainbow gradient background */
+      background: linear-gradient(45deg, #ff0000, #ff8000, #ffff00, #00ff00, #0000ff, #8000ff, #ff00ff);
+      background-size: 400% 400%;
+      animation: rainbow 8s linear infinite;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-position: center center;
+    }
+
+    /* Animation for the rainbow effect */
+    @keyframes rainbow {
+      0% {
+        background-position: 0% 50%;
+      }
+      100% {
+        background-position: 100% 50%;
+      }
+    }
+
+    .pokemon-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin: 10px;
+      width: 200px;
+      text-align: center;
+      border-radius: 10px; /* Border radius for a rounded look */
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Box shadow for a subtle depth effect */
+      background: linear-gradient(45deg, violet, indigo, blue, green, yellow, orange, red);
+      background-size: 150% 150%;
+      background-repeat: no-repeat;
+      background-position: center center;
+      color: white; /* Text color */
+      animation: breathe 2s ease-in-out infinite alternate;
+      
+    }
+
+    /* Animation for breathing effect */
+    @keyframes breathe {
+      0% {
+        transform: scale(1);
+      }
+      100% {
+        transform: scale(1.05);
+      }
+    }
+
+
+
+    .pokemon-card img {
+      width: 150px;
+      height: 150px;
+      margin-bottom: 10px;
+    }
+    .evolution-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .pokemon-card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>Pokemon Information</h1>
+    <button onclick="getRandomPokemon()">Get Random Pokemon</button>
+    <button onclick="getPreviousPokemon()">Previous</button>
+    <button onclick="getNextPokemon()">Next</button>
+    <br><br>
+    <label for="pokemonIdOrName">Search Pokemon by ID or Name:</label>
+    <input type="text" id="pokemonIdOrName">
+    <button onclick="searchPokemon()">Search</button>
+    <div id="pokemonInfo" class="pokemon-card-container"></div>
+  </div>
+
+  <script>
+    let currentPokemonId = 1;
+
+    async function getRandomPokemon() {
+      const randomId = Math.floor(Math.random() * 898) + 1;
+      await fetchPokemon(randomId);
+    }
+
+    async function fetchPokemon(id) {
+      try {
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        const pokemon = await response.json();
+
+        let abilitiesList = pokemon.abilities.map(ability => ability.ability.name).join(', ');
+        let typesList = pokemon.types.map(type => type.type.name).join(', ');
+
+        const pokemonInfo = `
+          <div class="pokemon-card">
+            <h2>${pokemon.name}</h2>
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png" alt="${pokemon.name}">
+            <p>Height: ${pokemon.height}</p>
+            <p>Weight: ${pokemon.weight}</p>
+            <p>Abilities: ${abilitiesList}</p>
+            <p>Type(s): ${typesList}</p>
+          </div>
+        `;
+
+        document.getElementById('pokemonInfo').innerHTML = pokemonInfo;
+        currentPokemonId = id;
+
+        // Fetch evolution data
+        const evolutionResponse = await fetch(pokemon.species.url);
+        const species = await evolutionResponse.json();
+        const evolutionChainResponse = await fetch(species.evolution_chain.url);
+        const evolutionChain = await evolutionChainResponse.json();
+
+        // Display evolution information
+        displayEvolution(evolutionChain.chain);
+
+      } catch (error) {
+        console.error('Error fetching Pokémon:', error);
+      }
+    }
+
+    function getPreviousPokemon() {
+      if (currentPokemonId > 1) {
+        fetchPokemon(currentPokemonId - 1);
+      }
+    }
+
+    function getNextPokemon() {
+      if (currentPokemonId < 898) {
+        fetchPokemon(currentPokemonId + 1);
+      }
+    }
+
+    async function searchPokemon() {
+      const input = document.getElementById('pokemonIdOrName').value;
+      const name = input.trim().toLowerCase();
+
+      if (name === '') {
+        alert('Please enter a Pokémon ID or Name.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
+        const pokemon = await response.json();
+
+        let abilitiesList = pokemon.abilities.map(ability => ability.ability.name).join(', ');
+        let typesList = pokemon.types.map(type => type.type.name).join(', ');
+
+        const pokemonInfo = `
+          <div class="pokemon-card">
+            <h2>${pokemon.name}</h2>
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png" alt="${pokemon.name}">
+            <p>Height: ${pokemon.height}</p>
+            <p>Weight: ${pokemon.weight}</p>
+            <p>Abilities: ${abilitiesList}</p>
+            <p>Type(s): ${typesList}</p>
+          </div>
+        `;
+
+        document.getElementById('pokemonInfo').innerHTML = pokemonInfo;
+        currentPokemonId = pokemon.id;
+
+        // Fetch evolution data
+        const evolutionResponse = await fetch(pokemon.species.url);
+        const species = await evolutionResponse.json();
+        const evolutionChainResponse = await fetch(species.evolution_chain.url);
+        const evolutionChain = await evolutionChainResponse.json();
+
+        // Display evolution information
+        displayEvolution(evolutionChain.chain);
+
+      } catch (error) {
+        alert('Pokemon not found. Please enter a valid Pokémon ID or Name.');
+      }
+    }
+
+    function displayEvolution(chain) {
+      let evolutionInfo = '<h3>Evolution:</h3>';
+
+      // Display the current Pokémon
+      evolutionInfo += `<div class="pokemon-card"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${getPokemonIdFromUrl(chain.species.url)}.png" alt="${chain.species.name}"><p>${chain.species.name}</p></div>`;
+
+      // If there are evolutions
+      if (chain.evolves_to.length > 0) {
+        evolutionInfo += '<h4>Evolves to:</h4>';
+        for (const evolution of chain.evolves_to) {
+          evolutionInfo += `
+            <div class="pokemon-card">
+              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${getPokemonIdFromUrl(evolution.species.url)}.png" alt="${evolution.species.name}">
+              <p>${evolution.species.name}</p>
+            </div>
+          `;
+        }
+      }
+
+      if (chain.evolves_to.length > 0 && chain.evolves_to[0].evolves_to.length > 0) {
+        evolutionInfo += '<h4>Triggers to:</h4>';
+        for (const evolution of chain.evolves_to[0].evolves_to) {
+          evolutionInfo += `
+            <div class="pokemon-card">
+              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${getPokemonIdFromUrl(evolution.species.url)}.png" alt="${evolution.species.name}">
+              <p>${evolution.species.name}</p>
+            </div>
+          `;
+        }
+      }
+
+      document.getElementById('pokemonInfo').innerHTML += evolutionInfo;
+    }
+
+    function getPokemonIdFromUrl(url) {
+      const parts = url.split('/');
+      return parts[parts.length - 2];
+    }
+  </script>
+</body>
+</html>

@@ -1,9 +1,0 @@
-/**
- * 
- */
-/**
- * @author shgrdnn
- *
- */
-module BankApplication {
-}
